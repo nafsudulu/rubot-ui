@@ -4,17 +4,30 @@
 ]]
 
 -- Load Library
-local UI = loadstring(game:HttpGet("YOUR_RAW_URL_HERE/RubotUI.lua"))()
+local UI = loadstring(game:HttpGet("https://raw.githubusercontent.com/nafsudulu/rubot-ui/refs/heads/main/RubotUI.lua"))()
 
 -- Load Icons (Lucide)
-local Icons = loadstring(game:HttpGet("YOUR_RAW_URL_HERE/Icons.lua"))()
+local Icons = loadstring(game:HttpGet("https://raw.githubusercontent.com/nafsudulu/rubot-ui/refs/heads/main/Icons.lua"))()
 
 -- Create Window
 local Window = UI:Window({
     Title = "Rubot Executor",
     Icon = Icons["terminal"],
-    Size = UDim2.new(0, 520, 0, 380),
+    Size = UDim2.new(0, 520, 0, 400),
+    MinSize = Vector2.new(400, 300),
+    MaxSize = Vector2.new(800, 600),
+    Transparency = 0,
+    Resizable = true,
 })
+
+-- Window events
+Window.Closed:Connect(function()
+    print("Window closed!")
+end)
+
+Window.Minimized:Connect(function()
+    print("Window minimized!")
+end)
 
 -- Tab 1: Main
 local MainTab = Window:Tab({
@@ -84,9 +97,24 @@ FOVSlider.Changed:Connect(function(value)
     print("FOV changed to:", value)
 end)
 
+local TransparencySlider = VisualSection:Slider({
+    Text = "Window Transparency",
+    Min = 0,
+    Max = 50,
+    Default = 0,
+    Step = 5,
+    Format = function(value)
+        return tostring(value) .. "%"
+    end,
+})
+
+TransparencySlider.Changed:Connect(function(value)
+    Window:SetTransparency(value / 100)
+end)
+
 local ThemeDropdown = VisualSection:Dropdown({
     Text = "Select Theme",
-    Options = {"Dark", "Light", "System"},
+    Options = { "Dark", "Light", "System" },
     Default = "Dark",
 })
 
@@ -98,8 +126,8 @@ local FeaturesSection = SettingsTab:Section("Features")
 
 local FeatureSelect = FeaturesSection:MultiDropdown({
     Text = "Enable Features",
-    Options = {"ESP", "Aimbot", "Triggerbot", "Wallhack"},
-    Default = {"ESP"},
+    Options = { "ESP", "Aimbot", "Triggerbot", "Wallhack" },
+    Default = { "ESP" },
 })
 
 FeatureSelect.Changed:Connect(function(selected)
@@ -115,7 +143,8 @@ local InfoTab = Window:Tab({
 local AboutSection = InfoTab:Section("About")
 
 AboutSection:Title("Rubot UI Library")
-AboutSection:Description("A minimalist Linear-inspired UI library for Roblox executors. Built with performance and simplicity in mind.")
+AboutSection:Description(
+    "A minimalist Linear-inspired UI library for Roblox executors. Built with performance and simplicity in mind.")
 
 local CreditsButton = AboutSection:Button({
     Text = "Show Credits",

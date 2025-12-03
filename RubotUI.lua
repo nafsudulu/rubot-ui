@@ -269,12 +269,19 @@ local function CreateWindow(library, config)
     local title = config.Title or "Window"
     local icon = config.Icon
     local size = config.Size or UDim2.new(0, 500, 0, 350)
+    local minSize = config.MinSize or Vector2.new(400, 300)
+    local maxSize = config.MaxSize or Vector2.new(900, 700)
     local canDrag = config.CanDrag ~= false
+    local canResize = config.Resizable ~= false
     local defaultOpen = config.DefaultOpen ~= false
+    local transparency = config.Transparency or 0
 
     local window = {}
     window.Tabs = {}
     window.VisibleChanged = Signal.new()
+    window.Closed = Signal.new()
+    window.Minimized = Signal.new()
+    local isMinimized = false
 
     local screenGui = Utils.Create("ScreenGui", {
         Name = "RubotUI",
@@ -283,13 +290,24 @@ local function CreateWindow(library, config)
         Parent = Player:WaitForChild("PlayerGui"),
     })
 
+    -- Dropdown overlay (always on top)
+    local dropdownOverlay = Utils.Create("Frame", {
+        Name = "DropdownOverlay",
+        Size = UDim2.new(1, 0, 1, 0),
+        BackgroundTransparency = 1,
+        ZIndex = 100,
+        Parent = screenGui,
+    })
+
     local mainFrame = Utils.Create("Frame", {
         Name = "MainFrame",
         Size = size,
         Position = UDim2.new(0.5, -size.X.Offset / 2, 0.5, -size.Y.Offset / 2),
         BackgroundColor3 = Theme.BgPrimary,
+        BackgroundTransparency = transparency,
         BorderSizePixel = 0,
         Visible = defaultOpen,
+        Active = true,
         Parent = screenGui,
     })
     Utils.ApplyCorner(mainFrame, Theme.CornerRadiusLarge)
@@ -302,7 +320,7 @@ local function CreateWindow(library, config)
         BackgroundTransparency = 1,
         Image = "rbxassetid://5554236805",
         ImageColor3 = Color3.fromRGB(0, 0, 0),
-        ImageTransparency = 0.6,
+        ImageTransparency = 0.5,
         ScaleType = Enum.ScaleType.Slice,
         SliceCenter = Rect.new(23, 23, 277, 277),
         ZIndex = -1,
@@ -316,18 +334,19 @@ local function CreateWindow(library, config)
         Parent = mainFrame,
     })
 
-    local topbarContent = Utils.Create("Frame", {
-        Name = "Content",
-        Size = UDim2.new(1, -Theme.Spacing.XXL * 2, 1, 0),
+    -- Left side: icon + title
+    local topbarLeft = Utils.Create("Frame", {
+        Name = "Left",
+        Size = UDim2.new(0.7, -Theme.Spacing.XXL, 1, 0),
         Position = UDim2.new(0, Theme.Spacing.XXL, 0, 0),
         BackgroundTransparency = 1,
         Parent = topbar,
     })
-    Utils.ApplyListLayout(topbarContent, Theme.Spacing.MD, Enum.FillDirection.Horizontal, Enum.HorizontalAlignment.Left,
+    Utils.ApplyListLayout(topbarLeft, Theme.Spacing.MD, Enum.FillDirection.Horizontal, Enum.HorizontalAlignment.Left,
         Enum.VerticalAlignment.Center)
 
     if icon then
-        Utils.ApplyIcon(topbarContent, icon, 18)
+        Utils.ApplyIcon(topbarLeft, icon, 18)
     end
 
     local titleLabel = Utils.Create("TextLabel", {
@@ -339,8 +358,67 @@ local function CreateWindow(library, config)
         TextSize = Theme.TextSize.Title,
         Font = Theme.FontBold,
         TextXAlignment = Enum.TextXAlignment.Left,
-        Parent = topbarContent,
+        Parent = topbarLeft,
     })
+
+    -- Right side: controls (minimize, close)
+    local topbarRight = Utils.Create("Frame", {
+        Name = "Right",
+        Size = UDim2.new(0, 70, 1, 0),
+        Position = UDim2.new(1, -70 - Theme.Spacing.MD, 0, 0),
+        BackgroundTransparency = 1,
+        Parent = topbar,
+    })
+    Utils.ApplyListLayout(topbarRight, Theme.Spacing.SM, Enum.FillDirection.Horizontal, Enum.HorizontalAlignment.Right,
+        Enum.VerticalAlignment.Center)
+
+    local minimizeBtn = Utils.Create("TextButton", {
+        Name = "Minimize",
+        Size = UDim2.new(0, 28, 0, 28),
+        BackgroundColor3 = Theme.BgSecondary,
+        BackgroundTransparency = 1,
+        Text = "−",
+        TextColor3 = Theme.TextSecondary,
+        TextSize = 18,
+        Font = Theme.FontBold,
+        AutoButtonColor = false,
+        Active = true,
+        LayoutOrder = 1,
+        Parent = topbarRight,
+    })
+    Utils.ApplyCorner(minimizeBtn)
+
+    local closeBtn = Utils.Create("TextButton", {
+        Name = "Close",
+        Size = UDim2.new(0, 28, 0, 28),
+        BackgroundColor3 = Theme.BgSecondary,
+        BackgroundTransparency = 1,
+        Text = "×",
+        TextColor3 = Theme.TextSecondary,
+        TextSize = 20,
+        Font = Theme.FontBold,
+        AutoButtonColor = false,
+        Active = true,
+        LayoutOrder = 2,
+        Parent = topbarRight,
+    })
+    Utils.ApplyCorner(closeBtn)
+
+    -- Control button hover effects
+    minimizeBtn.MouseEnter:Connect(function()
+        Utils.Tween(minimizeBtn, { BackgroundTransparency = 0, TextColor3 = Theme.TextPrimary }, 0.1)
+    end)
+    minimizeBtn.MouseLeave:Connect(function()
+        Utils.Tween(minimizeBtn, { BackgroundTransparency = 1, TextColor3 = Theme.TextSecondary }, 0.1)
+    end)
+    closeBtn.MouseEnter:Connect(function()
+        Utils.Tween(closeBtn,
+            { BackgroundTransparency = 0, BackgroundColor3 = Theme.Error, TextColor3 = Theme.TextPrimary }, 0.1)
+    end)
+    closeBtn.MouseLeave:Connect(function()
+        Utils.Tween(closeBtn,
+            { BackgroundTransparency = 1, BackgroundColor3 = Theme.BgSecondary, TextColor3 = Theme.TextSecondary }, 0.1)
+    end)
 
     local divider = Utils.Create("Frame", {
         Name = "Divider",
@@ -362,7 +440,8 @@ local function CreateWindow(library, config)
 
     local sidebar = Utils.Create("Frame", {
         Name = "Sidebar",
-        Size = UDim2.new(0, 140, 1, 0),
+        Size = UDim2.new(0, 140, 1, -Theme.Spacing.MD),
+        Position = UDim2.new(0, Theme.Spacing.MD, 0, 0),
         BackgroundColor3 = Theme.BgSecondary,
         BorderSizePixel = 0,
         Parent = contentArea,
@@ -380,8 +459,8 @@ local function CreateWindow(library, config)
 
     local sidebarDivider = Utils.Create("Frame", {
         Name = "SidebarDivider",
-        Size = UDim2.new(0, 1, 1, 0),
-        Position = UDim2.new(0, 140, 0, 0),
+        Size = UDim2.new(0, 1, 1, -Theme.Spacing.MD * 2),
+        Position = UDim2.new(0, 140 + Theme.Spacing.MD * 2, 0, Theme.Spacing.MD),
         BackgroundColor3 = Theme.Border,
         BorderSizePixel = 0,
         Parent = contentArea,
@@ -389,13 +468,31 @@ local function CreateWindow(library, config)
 
     local tabContent = Utils.Create("Frame", {
         Name = "TabContent",
-        Size = UDim2.new(1, -141, 1, 0),
-        Position = UDim2.new(0, 141, 0, 0),
+        Size = UDim2.new(1, -140 - Theme.Spacing.MD * 3, 1, -Theme.Spacing.MD),
+        Position = UDim2.new(0, 140 + Theme.Spacing.MD * 3, 0, 0),
         BackgroundTransparency = 1,
         Parent = contentArea,
     })
     Utils.ApplyPadding(tabContent, Theme.Spacing.XXL)
 
+    -- Resize handle
+    local resizeHandle = Utils.Create("TextButton", {
+        Name = "ResizeHandle",
+        Size = UDim2.new(0, 16, 0, 16),
+        Position = UDim2.new(1, -16, 1, -16),
+        BackgroundTransparency = 1,
+        Text = "⋱",
+        TextColor3 = Theme.TextSecondary,
+        TextSize = 14,
+        Font = Theme.Font,
+        AutoButtonColor = false,
+        Active = true,
+        Visible = canResize,
+        ZIndex = 5,
+        Parent = mainFrame,
+    })
+
+    -- Toggle button (draggable)
     local toggleButton = Utils.Create("TextButton", {
         Name = "ToggleButton",
         Size = UDim2.new(0, 40, 0, 40),
@@ -403,6 +500,7 @@ local function CreateWindow(library, config)
         BackgroundColor3 = Theme.Accent,
         Text = "",
         AutoButtonColor = false,
+        Active = true,
         Parent = screenGui,
     })
     Utils.ApplyCorner(toggleButton, Theme.CornerRadiusLarge)
@@ -410,22 +508,111 @@ local function CreateWindow(library, config)
     local toggleIcon = Utils.Create("TextLabel", {
         Size = UDim2.new(1, 0, 1, 0),
         BackgroundTransparency = 1,
-        Text = defaultOpen and "-" or "+",
+        Text = defaultOpen and "−" or "+",
         TextColor3 = Theme.BgPrimary,
         TextSize = 24,
         Font = Theme.FontBold,
         Parent = toggleButton,
     })
 
+    -- Make toggle button draggable
+    Utils.MakeDraggable(toggleButton, toggleButton)
+
     if canDrag then
         Utils.MakeDraggable(mainFrame, topbar)
     end
 
+    -- Resize functionality
+    if canResize then
+        local resizing = false
+        local resizeStart, sizeStart
+
+        resizeHandle.MouseButton1Down:Connect(function()
+            resizing = true
+            resizeStart = Vector2.new(Mouse.X, Mouse.Y)
+            sizeStart = mainFrame.AbsoluteSize
+        end)
+
+        UserInputService.InputEnded:Connect(function(input)
+            if input.UserInputType == Enum.UserInputType.MouseButton1 then
+                resizing = false
+            end
+        end)
+
+        RunService.RenderStepped:Connect(function()
+            if resizing then
+                local delta = Vector2.new(Mouse.X, Mouse.Y) - resizeStart
+                local newWidth = math.clamp(sizeStart.X + delta.X, minSize.X, maxSize.X)
+                local newHeight = math.clamp(sizeStart.Y + delta.Y, minSize.Y, maxSize.Y)
+                mainFrame.Size = UDim2.new(0, newWidth, 0, newHeight)
+            end
+        end)
+
+        resizeHandle.MouseEnter:Connect(function()
+            Utils.Tween(resizeHandle, { TextColor3 = Theme.TextPrimary }, 0.1)
+        end)
+        resizeHandle.MouseLeave:Connect(function()
+            Utils.Tween(resizeHandle, { TextColor3 = Theme.TextSecondary }, 0.1)
+        end)
+    end
+
+    -- Toggle button click with animation
     toggleButton.MouseButton1Click:Connect(function()
         local visible = not mainFrame.Visible
-        mainFrame.Visible = visible
-        toggleIcon.Text = visible and "-" or "+"
+        if visible then
+            mainFrame.Visible = true
+            mainFrame.Size = UDim2.new(0, size.X.Offset * 0.95, 0, size.Y.Offset * 0.95)
+            mainFrame.BackgroundTransparency = 1
+            Utils.Tween(mainFrame, {
+                Size = size,
+                BackgroundTransparency = transparency
+            }, 0.2, Enum.EasingStyle.Back)
+        else
+            Utils.Tween(mainFrame, {
+                Size = UDim2.new(0, size.X.Offset * 0.95, 0, size.Y.Offset * 0.95),
+                BackgroundTransparency = 1
+            }, 0.15)
+            task.delay(0.15, function()
+                mainFrame.Visible = false
+            end)
+        end
+        toggleIcon.Text = visible and "−" or "+"
         window.VisibleChanged:Fire(visible)
+    end)
+
+    -- Minimize button
+    minimizeBtn.MouseButton1Click:Connect(function()
+        isMinimized = true
+        Utils.Tween(mainFrame, {
+            Size = UDim2.new(0, size.X.Offset * 0.95, 0, size.Y.Offset * 0.95),
+            BackgroundTransparency = 1
+        }, 0.15)
+        task.delay(0.15, function()
+            mainFrame.Visible = false
+        end)
+        toggleIcon.Text = "+"
+        window.Minimized:Fire(true)
+    end)
+
+    -- Close button
+    closeBtn.MouseButton1Click:Connect(function()
+        Utils.Tween(mainFrame, {
+            Size = UDim2.new(0, size.X.Offset * 0.9, 0, size.Y.Offset * 0.9),
+            BackgroundTransparency = 1
+        }, 0.15)
+        Utils.Tween(toggleButton, { BackgroundTransparency = 1 }, 0.15)
+        task.delay(0.15, function()
+            screenGui:Destroy()
+        end)
+        window.Closed:Fire()
+    end)
+
+    -- Toggle button hover
+    toggleButton.MouseEnter:Connect(function()
+        Utils.Tween(toggleButton, { Size = UDim2.new(0, 44, 0, 44) }, 0.1)
+    end)
+    toggleButton.MouseLeave:Connect(function()
+        Utils.Tween(toggleButton, { Size = UDim2.new(0, 40, 0, 40) }, 0.1)
     end)
 
     function window:SetTitle(text)
@@ -433,21 +620,46 @@ local function CreateWindow(library, config)
     end
 
     function window:SetIcon(iconData)
-        for _, child in ipairs(topbarContent:GetChildren()) do
+        for _, child in ipairs(topbarLeft:GetChildren()) do
             if child:IsA("ImageLabel") then
                 child:Destroy()
             end
         end
         if iconData then
-            local newIcon = Utils.ApplyIcon(topbarContent, iconData, 18)
+            local newIcon = Utils.ApplyIcon(topbarLeft, iconData, 18)
             newIcon.LayoutOrder = -1
         end
     end
 
     function window:SetVisible(visible)
-        mainFrame.Visible = visible
-        toggleIcon.Text = visible and "-" or "+"
+        if visible then
+            mainFrame.Visible = true
+            mainFrame.Size = UDim2.new(0, size.X.Offset * 0.95, 0, size.Y.Offset * 0.95)
+            mainFrame.BackgroundTransparency = 1
+            Utils.Tween(mainFrame, {
+                Size = size,
+                BackgroundTransparency = transparency
+            }, 0.2, Enum.EasingStyle.Back)
+        else
+            Utils.Tween(mainFrame, {
+                Size = UDim2.new(0, size.X.Offset * 0.95, 0, size.Y.Offset * 0.95),
+                BackgroundTransparency = 1
+            }, 0.15)
+            task.delay(0.15, function()
+                mainFrame.Visible = false
+            end)
+        end
+        toggleIcon.Text = visible and "−" or "+"
         window.VisibleChanged:Fire(visible)
+    end
+
+    function window:SetTransparency(value)
+        transparency = value
+        Utils.Tween(mainFrame, { BackgroundTransparency = value }, 0.15)
+    end
+
+    function window:GetTransparency()
+        return transparency
     end
 
     function window:IsVisible()
@@ -464,7 +676,13 @@ local function CreateWindow(library, config)
 
     function window:Destroy()
         window.VisibleChanged:Destroy()
-        screenGui:Destroy()
+        window.Closed:Destroy()
+        window.Minimized:Destroy()
+        Utils.Tween(mainFrame, { BackgroundTransparency = 1 }, 0.15)
+        Utils.Tween(toggleButton, { BackgroundTransparency = 1 }, 0.15)
+        task.delay(0.15, function()
+            screenGui:Destroy()
+        end)
     end
 
     function window:Tab(tabConfig)
@@ -474,6 +692,7 @@ local function CreateWindow(library, config)
     window._mainFrame = mainFrame
     window._screenGui = screenGui
     window._tabContent = tabContent
+    window._dropdownOverlay = dropdownOverlay
 
     return window
 end
@@ -743,6 +962,7 @@ function CreateButton(parent, config)
         BackgroundColor3 = Theme.BgSecondary,
         Text = "",
         AutoButtonColor = false,
+        Active = true,
         Parent = parent,
     })
     Utils.ApplyCorner(buttonFrame)
@@ -754,7 +974,7 @@ function CreateButton(parent, config)
         Parent = buttonFrame,
     })
     Utils.ApplyListLayout(buttonContent, Theme.Spacing.MD, Enum.FillDirection.Horizontal, Enum.HorizontalAlignment
-    .Center, Enum.VerticalAlignment.Center)
+        .Center, Enum.VerticalAlignment.Center)
 
     local buttonIcon
     if icon then
@@ -869,6 +1089,7 @@ function CreateToggle(parent, config)
         BackgroundTransparency = 1,
         Text = "",
         AutoButtonColor = false,
+        Active = true,
         Parent = parent,
     })
 
@@ -980,6 +1201,7 @@ function CreateInput(parent, config)
         Size = UDim2.new(1, 0, 0, 36),
         BackgroundColor3 = Theme.BgPrimary,
         BorderSizePixel = 0,
+        Active = true,
         Parent = parent,
     })
     Utils.ApplyCorner(inputFrame)
@@ -994,6 +1216,7 @@ function CreateInput(parent, config)
         PlaceholderText = placeholder,
         PlaceholderColor3 = Theme.TextSecondary,
         TextColor3 = Theme.TextPrimary,
+        Active = true,
         TextSize = Theme.TextSize.Body,
         Font = Theme.FontMedium,
         TextXAlignment = Enum.TextXAlignment.Left,
@@ -1152,6 +1375,7 @@ function CreateSlider(parent, config)
         Position = UDim2.new(0, 0, 0, 24),
         BackgroundTransparency = 1,
         Text = "",
+        Active = true,
         Parent = sliderFrame,
     })
 
@@ -1241,12 +1465,14 @@ function CreateDropdown(parent, config)
     dropdown.Changed = Signal.new()
     local selected = default
     local isOpen = false
+    local targetHeight = 0
 
     local dropdownFrame = Utils.Create("Frame", {
         Name = text,
         Size = UDim2.new(1, 0, 0, 56),
         BackgroundTransparency = 1,
         ClipsDescendants = false,
+        ZIndex = 50,
         Parent = parent,
     })
 
@@ -1269,6 +1495,7 @@ function CreateDropdown(parent, config)
         BackgroundColor3 = Theme.BgPrimary,
         Text = "",
         AutoButtonColor = false,
+        Active = true,
         Parent = dropdownFrame,
     })
     Utils.ApplyCorner(selector)
@@ -1313,8 +1540,9 @@ function CreateDropdown(parent, config)
         BackgroundColor3 = Theme.BgPrimary,
         BorderSizePixel = 0,
         Visible = false,
-        ZIndex = 10,
+        ZIndex = 100,
         ClipsDescendants = true,
+        Active = true,
         Parent = dropdownFrame,
     })
     Utils.ApplyCorner(optionsContainer)
@@ -1329,7 +1557,8 @@ function CreateDropdown(parent, config)
         ScrollBarImageColor3 = Theme.Border,
         CanvasSize = UDim2.new(0, 0, 0, 0),
         AutomaticCanvasSize = Enum.AutomaticSize.Y,
-        ZIndex = 10,
+        ZIndex = 100,
+        Active = true,
         Parent = optionsContainer,
     })
     Utils.ApplyListLayout(optionsList, 0)
@@ -1343,7 +1572,8 @@ function CreateDropdown(parent, config)
             BackgroundTransparency = 1,
             Text = "",
             AutoButtonColor = false,
-            ZIndex = 10,
+            ZIndex = 100,
+            Active = true,
             Parent = optionsList,
         })
         Utils.ApplyCorner(optionButton)
@@ -1357,16 +1587,16 @@ function CreateDropdown(parent, config)
             TextSize = Theme.TextSize.Body,
             Font = Theme.FontMedium,
             TextXAlignment = Enum.TextXAlignment.Left,
-            ZIndex = 10,
+            ZIndex = 100,
             Parent = optionButton,
         })
 
         optionButton.MouseEnter:Connect(function()
-            Utils.Tween(optionButton, { BackgroundTransparency = 0, BackgroundColor3 = Theme.Hover }, 0.05)
+            Utils.Tween(optionButton, { BackgroundTransparency = 0, BackgroundColor3 = Theme.Hover }, 0.08)
         end)
 
         optionButton.MouseLeave:Connect(function()
-            Utils.Tween(optionButton, { BackgroundTransparency = 1 }, 0.05)
+            Utils.Tween(optionButton, { BackgroundTransparency = 1 }, 0.08)
         end)
 
         optionButton.MouseButton1Click:Connect(function()
@@ -1374,7 +1604,10 @@ function CreateDropdown(parent, config)
             selectedText.Text = optionText
             selectedText.TextColor3 = Theme.TextPrimary
             isOpen = false
-            optionsContainer.Visible = false
+            Utils.Tween(optionsContainer, { Size = UDim2.new(1, 0, 0, 0) }, 0.15)
+            task.delay(0.15, function()
+                optionsContainer.Visible = false
+            end)
             arrow.Text = "▼"
             dropdown.Changed:Fire(selected)
         end)
@@ -1391,16 +1624,32 @@ function CreateDropdown(parent, config)
         for _, opt in ipairs(options) do
             createOption(opt)
         end
-        local height = math.min(#options * 30 + Theme.Spacing.SM * 2, 150)
-        optionsContainer.Size = UDim2.new(1, 0, 0, height)
+        targetHeight = math.min(#options * 30 + Theme.Spacing.SM * 2, 150)
     end
 
     refreshOptions()
 
     selector.MouseButton1Click:Connect(function()
         isOpen = not isOpen
-        optionsContainer.Visible = isOpen
+        if isOpen then
+            optionsContainer.Visible = true
+            optionsContainer.Size = UDim2.new(1, 0, 0, 0)
+            Utils.Tween(optionsContainer, { Size = UDim2.new(1, 0, 0, targetHeight) }, 0.15)
+        else
+            Utils.Tween(optionsContainer, { Size = UDim2.new(1, 0, 0, 0) }, 0.15)
+            task.delay(0.15, function()
+                optionsContainer.Visible = false
+            end)
+        end
         arrow.Text = isOpen and "▲" or "▼"
+    end)
+
+    -- Selector hover effect
+    selector.MouseEnter:Connect(function()
+        Utils.Tween(selector, { BackgroundColor3 = Theme.Hover }, 0.1)
+    end)
+    selector.MouseLeave:Connect(function()
+        Utils.Tween(selector, { BackgroundColor3 = Theme.BgPrimary }, 0.1)
     end)
 
     function dropdown:Set(value)
