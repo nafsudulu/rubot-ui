@@ -4,10 +4,13 @@
 
     Usage:
     local UI = loadstring(game:HttpGet("..."))()
-    local Icons = loadstring(game:HttpGetAsync("https://raw.githubusercontent.com/Footagesus/Icons/main/Main.lua"))()
-    Icons.SetIconsType("lucide")
+    local Icons = loadstring(game:HttpGetAsync("https://raw.githubusercontent.com/Footagesus/Icons/main/Main-v2.lua"))()
+    Icons.SetIconsType("geist")
 
-    local Window = UI:Window({ Title = "My UI", Icon = Icons.Icon("terminal") })
+    local Window = UI:Window({
+        Title = "My UI",
+        Icon = Icons.Image({ Icon = "terminal", Size = UDim2.new(0, 18, 0, 18) })
+    })
 ]]
 
 -- ═══════════════════════════════════════════════════════════════════════════════
@@ -186,16 +189,29 @@ function Utils.ApplyIcon(parent, iconData, size)
     size = size or 16
     if not iconData then return nil end
 
-    local icon = Utils.Create("ImageLabel", {
-        Size = UDim2.new(0, size, 0, size),
-        BackgroundTransparency = 1,
-        Image = iconData[1],
-        ImageRectSize = iconData[2] and iconData[2].ImageRectSize or Vector2.new(0, 0),
-        ImageRectOffset = iconData[2] and iconData[2].ImageRectPosition or Vector2.new(0, 0),
-        ImageColor3 = Theme.TextPrimary,
-        Parent = parent,
-    })
-    return icon
+    -- New API: iconData is already an ImageLabel instance from Icons.Image()
+    if typeof(iconData) == "Instance" and iconData:IsA("ImageLabel") then
+        iconData.Size = UDim2.new(0, size, 0, size)
+        iconData.BackgroundTransparency = 1
+        iconData.Parent = parent
+        return iconData
+    end
+
+    -- Legacy API: iconData is {Image, {ImageRectSize, ImageRectPosition}}
+    if type(iconData) == "table" and iconData[1] then
+        local icon = Utils.Create("ImageLabel", {
+            Size = UDim2.new(0, size, 0, size),
+            BackgroundTransparency = 1,
+            Image = iconData[1],
+            ImageRectSize = iconData[2] and iconData[2].ImageRectSize or Vector2.new(0, 0),
+            ImageRectOffset = iconData[2] and iconData[2].ImageRectPosition or Vector2.new(0, 0),
+            ImageColor3 = Theme.TextPrimary,
+            Parent = parent,
+        })
+        return icon
+    end
+
+    return nil
 end
 
 function Utils.MakeDraggable(frame, handle)

@@ -6,21 +6,30 @@
 -- Load Library
 local UI = loadstring(game:HttpGet("YOUR_RAW_URL_HERE/RubotUI.lua"))()
 
--- Load Icons (Lucide)
-local Icons = loadstring(game:HttpGetAsync("https://raw.githubusercontent.com/Footagesus/Icons/main/Main.lua"))()
-Icons.SetIconsType("lucide")
+-- Load Icons (Geist)
+local Icons = loadstring(game:HttpGetAsync("https://raw.githubusercontent.com/Footagesus/Icons/main/Main-v2.lua"))()
+Icons.SetIconsType("geist")
+
+-- Helper function for creating icons
+local function Icon(name, size)
+    size = size or 16
+    return Icons.Image({
+        Icon = name,
+        Size = UDim2.new(0, size, 0, size)
+    })
+end
 
 -- Create Window
 local Window = UI:Window({
     Title = "Rubot Executor",
-    Icon = Icons.Icon("terminal"),
+    Icon = Icon("terminal", 18),
     Size = UDim2.new(0, 520, 0, 380),
 })
 
 -- Tab 1: Main
 local MainTab = Window:Tab({
     Title = "Main",
-    Icon = Icons.Icon("home"),
+    Icon = Icon("home"),
     Default = true,
 })
 
@@ -31,7 +40,7 @@ ExecutionSection:Description("Execute your scripts with ease using the tools bel
 
 local ExecuteButton = ExecutionSection:Button({
     Text = "Execute Script",
-    Icon = Icons.Icon("play"),
+    Icon = Icon("play"),
 })
 
 ExecuteButton.Clicked:Connect(function()
@@ -40,7 +49,7 @@ ExecuteButton.Clicked:Connect(function()
         Description = "Script executed successfully.",
         Type = "success",
         Duration = 3,
-        Icon = Icons.Icon("check-circle"),
+        Icon = Icon("check-circle"),
     })
 end)
 
@@ -65,7 +74,7 @@ end)
 -- Tab 2: Settings
 local SettingsTab = Window:Tab({
     Title = "Settings",
-    Icon = Icons.Icon("settings"),
+    Icon = Icon("settings"),
 })
 
 local VisualSection = SettingsTab:Section("Visual Settings")
@@ -110,27 +119,27 @@ end)
 -- Tab 3: Info
 local InfoTab = Window:Tab({
     Title = "Info",
-    Icon = Icons.Icon("info"),
+    Icon = Icon("info"),
 })
 
 local AboutSection = InfoTab:Section("About")
 
 AboutSection:Title("Rubot UI Library")
 AboutSection:Description(
-"A minimalist Linear-inspired UI library for Roblox executors. Built with performance and simplicity in mind.")
+    "A minimalist Linear-inspired UI library for Roblox executors. Built with performance and simplicity in mind.")
 
 local CreditsButton = AboutSection:Button({
     Text = "Show Credits",
-    Icon = Icons.Icon("users"),
+    Icon = Icon("users"),
 })
 
 CreditsButton.Clicked:Connect(function()
     local Modal = UI:Modal({
         Title = "Credits",
-        Description = "Rubot UI Library was created with love.\n\nDesign inspired by Linear.\nIcons by Lucide.",
+        Description = "Rubot UI Library was created with love.\n\nDesign inspired by Linear.\nIcons by Geist.",
         ConfirmText = "Close",
         CancelText = "Visit GitHub",
-        Icon = Icons.Icon("heart"),
+        Icon = Icon("heart"),
     })
 
     Modal:Show():Then(function(result)
@@ -143,40 +152,40 @@ local ToastSection = InfoTab:Section("Toast Examples")
 
 ToastSection:Button({
     Text = "Success Toast",
-    Icon = Icons.Icon("check-circle"),
+    Icon = Icon("check-circle"),
 }).Clicked:Connect(function()
     UI:Toast({
         Title = "Success!",
         Description = "Operation completed successfully.",
         Type = "success",
         Duration = 3,
-        Icon = Icons.Icon("check-circle"),
+        Icon = Icon("check-circle"),
     })
 end)
 
 ToastSection:Button({
     Text = "Error Toast",
-    Icon = Icons.Icon("x-circle"),
+    Icon = Icon("x-circle"),
 }).Clicked:Connect(function()
     UI:Toast({
         Title = "Error!",
         Description = "Something went wrong.",
         Type = "error",
         Duration = 3,
-        Icon = Icons.Icon("x-circle"),
+        Icon = Icon("x-circle"),
     })
 end)
 
 ToastSection:Button({
     Text = "Info Toast",
-    Icon = Icons.Icon("info"),
+    Icon = Icon("info"),
 }).Clicked:Connect(function()
     UI:Toast({
         Title = "Info",
         Description = "This is an informational message.",
         Type = "info",
         Duration = 3,
-        Icon = Icons.Icon("info"),
+        Icon = Icon("info"),
     })
 end)
 

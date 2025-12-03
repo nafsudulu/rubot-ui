@@ -1,13 +1,17 @@
--- Load icons
-local Icons = loadstring(game:HttpGetAsync("https://raw.githubusercontent.com/Footagesus/Icons/main/Main.lua"))()
+-- Load Icons
+local Icons = loadstring(game:HttpGetAsync("https://raw.githubusercontent.com/Footagesus/Icons/main/Main-v2.lua"))()
 
--- Set Icons Type
-Icons.SetIconsType("lucide") -- lucide, craft and more...
+local PrimaryColor = Color3.fromHex("#ffffff")
+local SecondaryColor = Color3.fromHex("#315dff")
 
--- Use Icons
-local HouseIcon = Icons.Icon("house")
 
-local ImageLabel = Instance.new("ImageLabel")
-ImageLabel.Image = HouseIcon[1]
-ImageLabel.ImageRectSize = HouseIcon[2].ImageRectSize
-ImageLabel.ImageRectOffset = HouseIcon[2].ImageRectPosition
+-- Change default icon set
+Icons.SetIconsType("geist")
+
+
+-- Create simple icon
+local houseIcon = Icons.Image({
+    Icon = "accessibility-unread", -- Default Geist icon
+    Colors = { PrimaryColor, SecondaryColor },
+    Size = UDim2.new(0, 32, 0, 32)
+})
