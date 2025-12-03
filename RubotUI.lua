@@ -1,15 +1,14 @@
 --[[
     Rubot UI Library
-    Minimalist Linear-Inspired UI for Roblox Executors
+    Minimalist Linear-Inspired UI for Roblox Executors (Dark Mode)
 
     Usage:
-    local UI = loadstring(game:HttpGet("..."))()
-    local Icons = loadstring(game:HttpGetAsync("https://raw.githubusercontent.com/Footagesus/Icons/main/Main-v2.lua"))()
-    Icons.SetIconsType("geist")
+    local UI = loadstring(game:HttpGet("URL/RubotUI.lua"))()
+    local Icons = loadstring(game:HttpGet("URL/Icons.lua"))()
 
     local Window = UI:Window({
         Title = "My UI",
-        Icon = Icons.Image({ Icon = "terminal", Size = UDim2.new(0, 18, 0, 18) })
+        Icon = Icons["terminal"],
     })
 ]]
 
@@ -28,13 +27,13 @@ local Mouse = Player:GetMouse()
 -- THEME (Linear-Inspired)
 -- ═══════════════════════════════════════════════════════════════════════════════
 local Theme = {
-    BgPrimary = Color3.fromHex("FFFFFF"),
-    BgSecondary = Color3.fromHex("F7F7F7"),
-    Border = Color3.fromHex("E4E4E7"),
-    TextPrimary = Color3.fromHex("1A1A1A"),
-    TextSecondary = Color3.fromHex("636363"),
-    Accent = Color3.fromHex("3A3A3A"),
-    Hover = Color3.fromHex("F3F3F3"),
+    BgPrimary = Color3.fromHex("0A0A0A"),
+    BgSecondary = Color3.fromHex("141414"),
+    Border = Color3.fromHex("262626"),
+    TextPrimary = Color3.fromHex("FAFAFA"),
+    TextSecondary = Color3.fromHex("A1A1A1"),
+    Accent = Color3.fromHex("FFFFFF"),
+    Hover = Color3.fromHex("1F1F1F"),
     Success = Color3.fromHex("10B981"),
     Error = Color3.fromHex("EF4444"),
     Warning = Color3.fromHex("F59E0B"),
@@ -189,7 +188,19 @@ function Utils.ApplyIcon(parent, iconData, size)
     size = size or 16
     if not iconData then return nil end
 
-    -- New API: iconData is already an ImageLabel instance from Icons.Image()
+    -- String asset ID from Icons.lua (e.g., "rbxassetid://...")
+    if type(iconData) == "string" then
+        local icon = Utils.Create("ImageLabel", {
+            Size = UDim2.new(0, size, 0, size),
+            BackgroundTransparency = 1,
+            Image = iconData,
+            ImageColor3 = Theme.TextPrimary,
+            Parent = parent,
+        })
+        return icon
+    end
+
+    -- ImageLabel instance
     if typeof(iconData) == "Instance" and iconData:IsA("ImageLabel") then
         iconData.Size = UDim2.new(0, size, 0, size)
         iconData.BackgroundTransparency = 1

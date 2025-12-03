@@ -6,30 +6,20 @@
 -- Load Library
 local UI = loadstring(game:HttpGet("YOUR_RAW_URL_HERE/RubotUI.lua"))()
 
--- Load Icons (Geist)
-local Icons = loadstring(game:HttpGetAsync("https://raw.githubusercontent.com/Footagesus/Icons/main/Main-v2.lua"))()
-Icons.SetIconsType("geist")
-
--- Helper function for creating icons
-local function Icon(name, size)
-    size = size or 16
-    return Icons.Image({
-        Icon = name,
-        Size = UDim2.new(0, size, 0, size)
-    })
-end
+-- Load Icons (Lucide)
+local Icons = loadstring(game:HttpGet("YOUR_RAW_URL_HERE/Icons.lua"))()
 
 -- Create Window
 local Window = UI:Window({
     Title = "Rubot Executor",
-    Icon = Icon("terminal", 18),
+    Icon = Icons["terminal"],
     Size = UDim2.new(0, 520, 0, 380),
 })
 
 -- Tab 1: Main
 local MainTab = Window:Tab({
     Title = "Main",
-    Icon = Icon("home"),
+    Icon = Icons["home"],
     Default = true,
 })
 
@@ -40,7 +30,7 @@ ExecutionSection:Description("Execute your scripts with ease using the tools bel
 
 local ExecuteButton = ExecutionSection:Button({
     Text = "Execute Script",
-    Icon = Icon("play"),
+    Icon = Icons["play"],
 })
 
 ExecuteButton.Clicked:Connect(function()
@@ -49,7 +39,7 @@ ExecuteButton.Clicked:Connect(function()
         Description = "Script executed successfully.",
         Type = "success",
         Duration = 3,
-        Icon = Icon("check-circle"),
+        Icon = Icons["circle-check"],
     })
 end)
 
@@ -74,7 +64,7 @@ end)
 -- Tab 2: Settings
 local SettingsTab = Window:Tab({
     Title = "Settings",
-    Icon = Icon("settings"),
+    Icon = Icons["settings"],
 })
 
 local VisualSection = SettingsTab:Section("Visual Settings")
@@ -96,8 +86,8 @@ end)
 
 local ThemeDropdown = VisualSection:Dropdown({
     Text = "Select Theme",
-    Options = { "Light", "Dark", "System" },
-    Default = "Light",
+    Options = {"Dark", "Light", "System"},
+    Default = "Dark",
 })
 
 ThemeDropdown.Changed:Connect(function(selected)
@@ -108,8 +98,8 @@ local FeaturesSection = SettingsTab:Section("Features")
 
 local FeatureSelect = FeaturesSection:MultiDropdown({
     Text = "Enable Features",
-    Options = { "ESP", "Aimbot", "Triggerbot", "Wallhack" },
-    Default = { "ESP" },
+    Options = {"ESP", "Aimbot", "Triggerbot", "Wallhack"},
+    Default = {"ESP"},
 })
 
 FeatureSelect.Changed:Connect(function(selected)
@@ -119,27 +109,26 @@ end)
 -- Tab 3: Info
 local InfoTab = Window:Tab({
     Title = "Info",
-    Icon = Icon("info"),
+    Icon = Icons["info"],
 })
 
 local AboutSection = InfoTab:Section("About")
 
 AboutSection:Title("Rubot UI Library")
-AboutSection:Description(
-    "A minimalist Linear-inspired UI library for Roblox executors. Built with performance and simplicity in mind.")
+AboutSection:Description("A minimalist Linear-inspired UI library for Roblox executors. Built with performance and simplicity in mind.")
 
 local CreditsButton = AboutSection:Button({
     Text = "Show Credits",
-    Icon = Icon("users"),
+    Icon = Icons["users"],
 })
 
 CreditsButton.Clicked:Connect(function()
     local Modal = UI:Modal({
         Title = "Credits",
-        Description = "Rubot UI Library was created with love.\n\nDesign inspired by Linear.\nIcons by Geist.",
+        Description = "Rubot UI Library was created with love.\n\nDesign inspired by Linear.\nIcons by Lucide.",
         ConfirmText = "Close",
         CancelText = "Visit GitHub",
-        Icon = Icon("heart"),
+        Icon = Icons["heart"],
     })
 
     Modal:Show():Then(function(result)
@@ -152,40 +141,40 @@ local ToastSection = InfoTab:Section("Toast Examples")
 
 ToastSection:Button({
     Text = "Success Toast",
-    Icon = Icon("check-circle"),
+    Icon = Icons["circle-check"],
 }).Clicked:Connect(function()
     UI:Toast({
         Title = "Success!",
         Description = "Operation completed successfully.",
         Type = "success",
         Duration = 3,
-        Icon = Icon("check-circle"),
+        Icon = Icons["circle-check"],
     })
 end)
 
 ToastSection:Button({
     Text = "Error Toast",
-    Icon = Icon("x-circle"),
+    Icon = Icons["circle-x"],
 }).Clicked:Connect(function()
     UI:Toast({
         Title = "Error!",
         Description = "Something went wrong.",
         Type = "error",
         Duration = 3,
-        Icon = Icon("x-circle"),
+        Icon = Icons["circle-x"],
     })
 end)
 
 ToastSection:Button({
     Text = "Info Toast",
-    Icon = Icon("info"),
+    Icon = Icons["info"],
 }).Clicked:Connect(function()
     UI:Toast({
         Title = "Info",
         Description = "This is an informational message.",
         Type = "info",
         Duration = 3,
-        Icon = Icon("info"),
+        Icon = Icons["info"],
     })
 end)
 
