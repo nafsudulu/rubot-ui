@@ -4690,7 +4690,7 @@ do
             end)
 
             if ag.Draggable ~= false then
-                ab.Drag(al)
+                ab.Drag(al, { am })
             end
 
             function af.SetVisible(an, ao)
